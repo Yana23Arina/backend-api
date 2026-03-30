@@ -1,3 +1,4 @@
+// importDump.js
 const { Client } = require('pg');
 const fs = require('fs');
 require('dotenv').config();
@@ -15,26 +16,29 @@ async function importDump() {
     await client.connect();
     console.log("Connected to database ✅");
 
+    // Читаем дамп
     const sql = fs.readFileSync('./gruschn4_01_postgres.sql', 'utf8');
 
+    // Разделяем по точке с запятой
     const commands = sql.split(/;\s*$/m);
 
     for (let cmd of commands) {
-      if (cmd.trim() !== '') {
+      if (cmd.trim()) {
         await client.query(cmd);
       }
     }
 
     console.log("Database dump imported successfully! 🎉");
-    await client.end();
   } catch (err) {
     console.error("Error importing dump:", err);
+  } finally {
+    await client.end();
   }
 }
 
-module.exports = { importDump };
-
-// Если хочешь запускать отдельно
+// Если файл запускается напрямую
 if (require.main === module) {
   importDump();
 }
+
+module.exports = { importDump };
