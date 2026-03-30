@@ -2,7 +2,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { importDump } = require('./importDump'); // на случай ручного импорта
 
 dotenv.config();
 
@@ -13,7 +12,7 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Мидлвары
+// Разрешаем CORS всем источникам (можно заменить на домен фронтенда)
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
