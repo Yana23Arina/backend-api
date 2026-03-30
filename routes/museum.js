@@ -1,28 +1,28 @@
+// routes/museum.js
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/database');
+const pool = require('../config/database'); // PostgreSQL Pool
 const authenticateToken = require('../middleware/auth');
 
-// Цена одного билета (можно вынести в отдельную переменную)
-const TICKET_PRICE = 500; // 500 рублей за билет
+// Цена одного билета
+const TICKET_PRICE = 500; // 500 рублей
 
 // Создание бронирования с ценой
 router.post('/bookings', authenticateToken, async (req, res) => {
     try {
         const { visit_date, visitors_count } = req.body;
         const user_id = req.user.id;
-        
-        // Рассчитываем общую стоимость
+
         const total_price = visitors_count * TICKET_PRICE;
-        
-        const [result] = await pool.execute(
-            'INSERT INTO bookings (user_id, visit_date, visitors_count, price) VALUES (?, ?, ?, ?)',
+
+        const result = await pool.query(
+            'INSERT INTO bookings (user_id, visit_date, visitors_count, price) VALUES ($1, $2, $3, $4) RETURNING id',
             [user_id, visit_date, visitors_count, total_price]
         );
-        
+
         res.status(201).json({
             message: 'Бронирование успешно создано',
-            booking_id: result.insertId,
+            booking_id: result.rows[0].id,
             total_price: total_price
         });
     } catch (error) {
@@ -31,14 +31,14 @@ router.post('/bookings', authenticateToken, async (req, res) => {
     }
 });
 
-// Получение бронирований пользователя с ценой
+// Получение бронирований пользователя
 router.get('/bookings', authenticateToken, async (req, res) => {
     try {
-        const [bookings] = await pool.execute(
-            'SELECT * FROM bookings WHERE user_id = ? ORDER BY visit_date DESC',
+        const result = await pool.query(
+            'SELECT * FROM bookings WHERE user_id = $1 ORDER BY visit_date DESC',
             [req.user.id]
         );
-        res.json(bookings);
+        res.json(result.rows);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Ошибка сервера' });
@@ -50,16 +50,16 @@ router.delete('/bookings/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const user_id = req.user.id;
-        
-        const [result] = await pool.execute(
-            'DELETE FROM bookings WHERE id = ? AND user_id = ?',
+
+        const result = await pool.query(
+            'DELETE FROM bookings WHERE id = $1 AND user_id = $2',
             [id, user_id]
         );
-        
-        if (result.affectedRows === 0) {
+
+        if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Бронирование не найдено' });
         }
-        
+
         res.json({ message: 'Бронирование успешно отменено' });
     } catch (error) {
         console.error(error);
@@ -70,10 +70,10 @@ router.delete('/bookings/:id', authenticateToken, async (req, res) => {
 // Получение всех экспонатов
 router.get('/exhibits', async (req, res) => {
     try {
-        const [exhibits] = await pool.execute(
+        const result = await pool.query(
             'SELECT * FROM exhibits ORDER BY created_at DESC'
         );
-        res.json(exhibits);
+        res.json(result.rows);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Ошибка сервера' });
@@ -83,16 +83,17 @@ router.get('/exhibits', async (req, res) => {
 // Получение одного экспоната
 router.get('/exhibits/:id', async (req, res) => {
     try {
-        const [exhibits] = await pool.execute(
-            'SELECT * FROM exhibits WHERE id = ?',
-            [req.params.id]
+        const { id } = req.params;
+        const result = await pool.query(
+            'SELECT * FROM exhibits WHERE id = $1',
+            [id]
         );
-        
-        if (exhibits.length === 0) {
+
+        if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Экспонат не найден' });
         }
-        
-        res.json(exhibits[0]);
+
+        res.json(result.rows[0]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Ошибка сервера' });
