@@ -1,30 +1,26 @@
-// importDump.js
-import pg from "pg";
-import fs from "fs";
-import dotenv from "dotenv";
-
-dotenv.config(); // читаем .env
-
-const client = new pg.Client({
-  host: process.env.DB_HOST,
-  port: 5432,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+const { Client } = require('pg');
+const fs = require('fs');
+require('dotenv').config();
 
 async function importDump() {
+  const client = new Client({
+    host: process.env.DB_HOST,
+    port: 5432,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
+
   try {
     await client.connect();
     console.log("Connected to database ✅");
 
-    const sql = fs.readFileSync("./gruschn4_01_postgres.sql", "utf8");
+    const sql = fs.readFileSync('./gruschn4_01_postgres.sql', 'utf8');
 
-    // Разделяем на отдельные команды
     const commands = sql.split(/;\s*$/m);
 
     for (let cmd of commands) {
-      if (cmd.trim() !== "") {
+      if (cmd.trim() !== '') {
         await client.query(cmd);
       }
     }
@@ -36,5 +32,9 @@ async function importDump() {
   }
 }
 
-// Запуск скрипта
-importDump();
+module.exports = { importDump };
+
+// Если хочешь запускать отдельно
+if (require.main === module) {
+  importDump();
+}
